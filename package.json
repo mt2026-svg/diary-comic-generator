@@ -1,7 +1,8 @@
 {
-  "name": "diary-comic-generator",
+  "name": "diary-comic",
   "version": "1.0.0",
+  "type": "module",
   "dependencies": {
-    "node-fetch": "^2.6.11"
+    "node-fetch": "^3.3.2"
   }
 }
