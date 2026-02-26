@@ -27,13 +27,13 @@
     <script>
         async function generate() {
             const input = document.getElementById('diaryInput').value;
-            if(!input) return alert("日記を入力してください");
-            
+            if (!input) return alert("日記を入力してください");
+
             const loading = document.getElementById('loading');
             const grid = document.getElementById('grid');
             loading.style.display = 'block';
             grid.innerHTML = '';
-            
+
             try {
                 const res = await fetch('/api/generate', {
                     method: 'POST',
@@ -44,10 +44,9 @@
                 });
 
                 const data = await res.json();
-                
-                // エラーハンドリング
+
                 if (data.error) throw new Error(data.error.message || "APIエラー");
-                
+
                 const responseText = data.candidates[0].content.parts[0].text;
                 const jsonText = responseText.replace(/```json|```/g, '').trim();
                 const json = JSON.parse(jsonText);
