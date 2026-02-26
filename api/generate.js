@@ -1,8 +1,8 @@
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   const apiKey = process.env.GEMINI_API_KEY;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   try {
     const response = await fetch(url, {
@@ -10,17 +10,13 @@ module.exports = async (req, res) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req.body)
     });
-    
+
     const data = await response.json();
-
-    // Googleからエラーが返ってきた場合の処理
-    if (data.error) {
-      return res.status(500).json({ error: data.error.message });
-    }
-
-    // 正常な返答をそのままフロントエンドに送る
-    res.status(200).json(data);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+    
+    // Googleから返ってきたデータをそのままフロント（HTML）に横流しする
+    res.setHeader('Content-Type', 'application/json');
+    res.status(200).send(JSON.stringify(data));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
-};
+}
