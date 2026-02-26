@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   const apiKey = process.env.GEMINI_API_KEY;
-
+  
   // 1. キーが読み込めているかチェック
   if (!apiKey) {
     return res.status(500).json({ error: { message: "Vercelの環境変数 GEMINI_API_KEY が空です。Settingsを確認してください。" } });
@@ -8,7 +8,7 @@ export default async function handler(req, res) {
 
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -16,8 +16,8 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-
-    // 2. Googleからのエラーをそのままクライアントへ返す
+    
+    // 2. Googleからのエラーをそのままクライアントに返す
     if (!response.ok) {
       return res.status(response.status).json(data);
     }
