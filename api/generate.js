@@ -3,8 +3,8 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(500).json({ text: "エラー：APIキーが未設定です" });
 
   try {
-    // モデル名を gemini-1.5-flash から gemini-pro に変更（確実性を優先）
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+    // モデル名の前に 'models/' を追加（これが正解です）
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req.body)
