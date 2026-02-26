@@ -5,19 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>きょうの4コマ日記</title>
     <style>
-        /* Claudeのデザインをここに統合しています */
         :root { --paper: #fef9ed; --ink: #2c2416; --accent: #e8734a; --line: #d4c5a9; }
-        body { background: #fdf6e3; font-family: 'Helvetica Neue', Arial, sans-serif; color: var(--ink); padding: 20px; line-height: 1.6; }
-        .container { max-width: 700px; margin: 0 auto; background: var(--paper); padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 8px; }
-        h1 { text-align: center; color: var(--accent); border: 2px solid var(--accent); display: inline-block; padding: 5px 20px; margin: 0 auto 30px; display: block; width: fit-content; }
+        body { background: #fdf6e3; font-family: sans-serif; color: var(--ink); padding: 20px; line-height: 1.6; display: flex; flex-direction: column; align-items: center; }
+        .container { max-width: 700px; width: 100%; background: var(--paper); padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 8px; box-sizing: border-box; }
+        h1 { text-align: center; color: var(--accent); border: 2px solid var(--accent); padding: 5px 20px; margin: 0 auto 30px; width: fit-content; }
         textarea { width: 100%; height: 120px; border: none; border-bottom: 2px solid var(--line); background: transparent; font-size: 16px; margin-bottom: 20px; outline: none; resize: none; }
-        button { width: 100%; padding: 15px; background: var(--ink); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 18px; transition: 0.3s; }
+        button { width: 100%; padding: 15px; background: var(--ink); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 18px; }
         button:hover { background: var(--accent); }
         .comic-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px; }
         .panel { background: white; border: 2px solid var(--ink); aspect-ratio: 4/3; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
         .panel-num { position: absolute; top: 5px; left: 5px; background: var(--ink); color: white; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center; }
         .emoji { font-size: 48px; margin-bottom: 10px; }
-        .caption { font-size: 14px; text-align: center; font-weight: bold; }
+        .caption { font-size: 13px; text-align: center; font-weight: bold; }
         #loading { display: none; text-align: center; margin-top: 20px; color: var(--accent); font-weight: bold; }
     </style>
 </head>
@@ -41,35 +40,44 @@ async function generate() {
     loading.style.display = 'block';
     grid.innerHTML = '';
 
-    const prompt = `以下の日記から4コマ漫画の構成を日本語のJSONで作成してください。
-    {"title": "タイトル", "panels": [{"emoji": "絵文字", "caption": "説明"}]} ※必ず4枚分。
+    const prompt = `以下の日記から4コマ漫画の構成を日本語のJSONで作成してください。必ず以下の形式のJSONのみを返してください。
+    {"title": "タイトル", "panels": [{"emoji": "絵文字", "caption": "説明"}]}
     日記: ${text}`;
 
     try {
-        // ★APIキーを直接使わず、自作の /api/generate を叩く
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { response_mime_type: "application/json" }
+                contents: [{ parts: [{ text: prompt }] }]
             })
         });
 
         const data = await response.json();
-        const comic = JSON.parse(data.candidates[0].content.parts[0].text);
+        
+        // エラーチェック: Geminiからの返答があるか
+        if (!data.candidates || !data.candidates[0].content.parts[0].text) {
+            throw new Error("APIからの応答が空です");
+        }
+
+        let rawText = data.candidates[0].content.parts[0].text;
+        
+        // 余計なマークダウン（```json など）を削る
+        rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+        
+        const comic = JSON.parse(rawText);
 
         comic.panels.forEach((p, i) => {
             grid.innerHTML += `
                 <div class="panel">
                     <div class="panel-num">${i + 1}</div>
-                    <div class="emoji">${p.emoji}</div>
-                    <div class="caption">${p.caption}</div>
+                    <div class="emoji">${p.emoji || "🤔"}</div>
+                    <div class="caption">${p.caption || ""}</div>
                 </div>`;
         });
     } catch (e) {
-        alert("エラーが発生しました。VercelのEnvironment Variables設定を確認してください。");
-        console.error(e);
+        console.error("Error details:", e);
+        alert("エラーが発生しました。Vercelのキー設定が正しいか、もう一度だけ確認してください。");
     } finally {
         loading.style.display = 'none';
     }
