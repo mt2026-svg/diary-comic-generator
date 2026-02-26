@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Gemini 4コマ日記</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 600px; width: 100%; }
+        h1 { color: #1a73e8; text-align: center; }
+        textarea { width: 100%; height: 100px; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; margin-bottom: 10px; resize: none; }
+        input[type="text"] { width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background-color: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #1557b0; }
+        button:disabled { background-color: #ccc; }
+        #output { margin-top: 30px; width: 100%; }
+        .comic-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .panel { background: #fff8e1; border: 2px solid #333; padding: 15px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; }
+        .panel-num { position: absolute; top: 5px; left: 5px; background: #333; color: white; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+        .emoji { font-size: 50px; margin-bottom: 10px; }
+        .caption { font-size: 14px; color: #333; font-weight: bold; }
+        .loading { text-align: center; color: #666; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Gemini 4コマ日記</h1>
+    
+    <label>1. APIキーを入力：</label>
+    <input type="text" id="apiKey" placeholder="AIzaSy...">
+    
+    <label>2. 今日あったことを入力：</label>
+    <textarea id="diaryInput" placeholder="例：今日は公園で猫を追いかけた。お昼に食べたパスタが美味しかった。"></textarea>
+    
+    <button id="genBtn" onclick="generate()">漫画を作成する</button>
+
+    <div id="loading" class="loading">Geminiが執筆中...</div>
+
+    <div id="output">
+        <h2 id="comicTitle" style="text-align:center;"></h2>
+        <div class="comic-grid" id="comicGrid"></div>
+    </div>
+</div>
+
+<script>
+async function generate() {
+    const key = document.getElementById('apiKey').value;
+    const text = document.getElementById('diaryInput').value;
+    const btn = document.getElementById('genBtn');
+    
+    if (!key) return alert('APIキーを入力してください');
+    if (!text) return alert('日記を入力してください');
+
+    btn.disabled = true;
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('comicGrid').innerHTML = '';
+    document.getElementById('comicTitle').innerText = '';
+
+    const prompt = `
+    以下の日記の内容から、面白い4コマ漫画の構成を考えてください。
+    日記: "${text}"
+    
+    必ず以下のJSON形式のみで回答してください。余計な解説は不要です。
+    {
+      "title": "タイトル",
+      "panels": [
+        {"num": 1, "emoji": "絵文字", "caption": "セリフや説明"},
+        {"num": 2, "emoji": "絵文字", "caption": "セリフや説明"},
+        {"num": 3, "emoji": "絵文字", "caption": "セリフや説明"},
+        {"num": 4, "emoji": "絵文字", "caption": "セリフや説明"}
+      ]
+    }`;
+
+    try {
+        // v1betaではなく最新のv1エンドポイントを直接叩きます
+        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${key}`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
+        });
+
+        const data = await response.json();
+        const resultText = data.candidates[0].content.parts[0].text;
+        const json = JSON.parse(resultText.replace(/```json|```/g, ''));
+
+        document.getElementById('comicTitle').innerText = json.title;
+        json.panels.forEach(p => {
+            const panel = document.createElement('div');
+            panel.className = 'panel';
+            panel.innerHTML = `
+                <div class="panel-num">${p.num}</div>
+                <div class="emoji">${p.emoji}</div>
+                <div class="caption">${p.caption}</div>
+            `;
+            document.getElementById('comicGrid').appendChild(panel);
+        });
+
+    } catch (e) {
+        alert('エラーが発生しました。キーが正しいか、最新のv1プロジェクトで作られたものか確認してください。');
+        console.error(e);
+    } finally {
+        btn.disabled = false;
+        document.getElementById('loading').style.display = 'none';
+    }
+}
+</script>
+
+</body>
+</html>
